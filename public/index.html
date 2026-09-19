@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSE Stock Scanner & Trading Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="navbar">
+            <div class="brand">
+                <span class="logo-badge">NSE</span>
+                <h1>Trading Monitor <span class="badge">SIGNAL-ONLY SCANNER</span></h1>
+            </div>
+            <div class="market-status-bar" id="market-status-box">
+                <span class="pulse-indicator" id="status-pulse"></span>
+                <span id="market-status-text">Market: Checking...</span>
+            </div>
+        </header>
+
+        <!-- Scanner Control Center -->
+        <section class="card control-center-card">
+            <div class="control-header">
+                <div>
+                    <h2>Scanner Control Center</h2>
+                    <p class="subtitle">Chartink Rule: <code>Abs(Daily Open) &gt; 100 AND Daily Volume &gt; 12 Months Ago High</code></p>
+                </div>
+                <div class="scanner-actions">
+                    <button id="start-btn" class="btn btn-start" onclick="startScanner()">▶ START</button>
+                    <button id="stop-btn" class="btn btn-stop" onclick="stopScanner()">⏹ STOP</button>
+                    <button id="run-once-btn" class="btn btn-run" onclick="runOnce()">⚡ RUN ONCE</button>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <span class="metric-label">Scanner Status</span>
+                    <span class="metric-val" id="scanner-status-val">STOPPED</span>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-label">Market State</span>
+                    <span class="metric-val" id="scanner-market-val">UNKNOWN</span>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-label">Symbols Scanned</span>
+                    <span class="metric-val" id="scanner-symbols-val">0</span>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-label">Signals Triggered</span>
+                    <span class="metric-val highlight" id="scanner-signals-val">0</span>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-label">Watchlist Source</span>
+                    <span class="metric-val" id="scanner-source-val" style="color: #38bdf8;">Excel</span>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-label">Symbols Loaded</span>
+                    <span class="metric-val" id="scanner-loaded-val">0</span>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-label">Last Scan Time</span>
+                    <span class="metric-val mono" id="scanner-last-scan">Never</span>
+                </div>
+                <div class="metric-box">
+                    <span class="metric-label">Next Scheduled Scan</span>
+                    <span class="metric-val mono" id="scanner-next-scan">Manual / Off</span>
+                </div>
+            </div>
+
+            <!-- Error Banner if any -->
+            <div id="scanner-error-banner" class="error-banner" style="display: none;"></div>
+
+            <!-- Alert Channels Status -->
+            <div class="alert-channels-status" id="alert-channels-box">
+                <span class="channel-title">Alert Channels:</span>
+                <span class="channel-tag not-configured" id="tg-tag">Telegram (Off)</span>
+                <span class="channel-tag not-configured" id="wh-tag">Webhook (Off)</span>
+                <span class="channel-tag not-configured" id="wa-tag">WhatsApp (Not Included)</span>
+                <span class="channel-tag not-configured" id="android-tag">Android (Not Included)</span>
+            </div>
+        </section>
+
+        <!-- Main Content Grid -->
+        <main class="dashboard-grid">
+            <!-- Recent Signals Feed -->
+            <section class="card signals-card">
+                <div class="card-header">
+                    <h2>Live Breakout Signals</h2>
+                    <button class="refresh-btn" onclick="fetchSignals()">↻ Refresh</button>
+                </div>
+                <div id="signals-table-container">
+                    <table class="data-table" id="signals-table">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Name</th>
+                                <th>Open</th>
+                                <th>Day Volume</th>
+                                <th>12M Ago High</th>
+                                <th>Rule</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="signals-tbody">
+                            <tr>
+                                <td colspan="7" class="empty-state">No breakout signals generated yet. Click "RUN ONCE" or "START" to scan.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Stock Lookup & Single Test -->
+            <section class="card search-card">
+                <h2>Live Equity Quote & Rule Test</h2>
+                <form id="search-form" class="search-form">
+                    <input type="text" id="symbol-input" placeholder="e.g. RELIANCE, TCS, INFY, TATAMOTORS" required />
+                    <button type="submit" id="search-btn">Check Quote</button>
+                </form>
+                <div class="quick-tags">
+                    <span>Popular:</span>
+                    <button class="tag-btn" onclick="fetchQuote('RELIANCE')">RELIANCE</button>
+                    <button class="tag-btn" onclick="fetchQuote('TCS')">TCS</button>
+                    <button class="tag-btn" onclick="fetchQuote('HDFCBANK')">HDFCBANK</button>
+                    <button class="tag-btn" onclick="fetchQuote('INFY')">INFY</button>
+                </div>
+
+                <div id="quote-display" class="quote-container" style="display: none;">
+                    <div class="quote-header">
+                        <div>
+                            <h3 id="stock-name">Company Name</h3>
+                            <span id="stock-symbol" class="ticker">SYMBOL</span>
+                            <span id="stock-industry" class="industry">Industry</span>
+                        </div>
+                        <div class="price-box">
+                            <div class="main-price" id="stock-price">₹0.00</div>
+                            <div class="price-change" id="stock-change">+0.00%</div>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Day Open</span>
+                            <span class="stat-val" id="stock-open">₹0.00</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Day Volume</span>
+                            <span class="stat-val" id="stock-volume">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Day High / Low</span>
+                            <span class="stat-val" id="day-range">₹0 - ₹0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">52W Range</span>
+                            <span class="stat-val" id="year-range">₹0 - ₹0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
